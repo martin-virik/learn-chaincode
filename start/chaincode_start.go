@@ -105,6 +105,10 @@ func (t *SimpleChaincode) registerAccounts(stub shim.ChaincodeStubInterface, arg
 	registeredIds, err := GetAllAccountIds(stub)
 	var newIds []string
 
+	if registeredIds == nil {
+		registeredIds = make(map[string]int)
+	}
+
 	//create a bunch of accounts
 	for _, id := range ids {
 		if registeredIds[id] != 1 {
