@@ -34,9 +34,9 @@ type SimpleChaincode struct {
 
 // comment
 type Account struct {
-	id      string  `json:"id"`
-	balance float64 `json:"balance"`
-	loyalty int64   `json:"loyalty"`
+	ID      string  `json:"id"`
+	Balance float64 `json:"balance"`
+	Loyalty int64   `json:"loyalty"`
 }
 
 // ============================================================================================================================
@@ -130,8 +130,8 @@ func (t *SimpleChaincode) registerAccounts(stub shim.ChaincodeStubInterface, arg
 
 	var account Account
 	for _, newId := range newIds {
-		account = Account{id: newId, balance: 10000.0, loyalty: 0}
-		fmt.Println("New Account" + account.id)
+		account = Account{ID: newId, Balance: 10000.0, Loyalty: 0}
+		fmt.Println("New Account" + account.ID)
 		accountBytes, err := json.Marshal(&account)
 		fmt.Println("New Account bytes" + string(accountBytes))
 		err = stub.PutState(accountPrefix+newId, accountBytes)
@@ -189,7 +189,7 @@ func (t *SimpleChaincode) transfer(stub shim.ChaincodeStubInterface, args []stri
 		return nil, errors.New("Error getting from account")
 	}
 
-	if fromAccount.balance < amount {
+	if fromAccount.Balance < amount {
 		fmt.Println("error not enough resources on from account")
 		return nil, errors.New("error not enough resources on from account")
 	}
@@ -200,8 +200,8 @@ func (t *SimpleChaincode) transfer(stub shim.ChaincodeStubInterface, args []stri
 		return nil, errors.New("Error getting to account")
 	}
 
-	fromAccount.balance = fromAccount.balance - amount
-	toAccount.balance = toAccount.balance + amount
+	fromAccount.Balance = fromAccount.Balance - amount
+	toAccount.Balance = toAccount.Balance + amount
 
 	fromAccountBytes, err := json.Marshal(&fromAccount)
 	err = stub.PutState(accountPrefix+fromId, fromAccountBytes)
@@ -256,7 +256,7 @@ func (t *SimpleChaincode) addLoyalty(stub shim.ChaincodeStubInterface, args []st
 		return nil, errors.New("Error getting account")
 	}
 
-	account.loyalty = account.loyalty + points
+	account.Loyalty = account.Loyalty + points
 
 	accountBytes, err := json.Marshal(&account)
 	err = stub.PutState(accountPrefix+accountId, accountBytes)
@@ -304,12 +304,12 @@ func (t *SimpleChaincode) removeLoyalty(stub shim.ChaincodeStubInterface, args [
 		return nil, errors.New("Error getting account")
 	}
 
-	if account.loyalty < points {
+	if account.Loyalty < points {
 		fmt.Println("not enough loyalty points")
 		return nil, errors.New("not enough loyalty points")
 	}
 
-	account.loyalty = account.loyalty - points
+	account.Loyalty = account.Loyalty - points
 
 	accountBytes, err := json.Marshal(&account)
 	err = stub.PutState(accountPrefix+accountId, accountBytes)
