@@ -77,9 +77,9 @@ func (t *SimpleChaincode) Invoke(stub shim.ChaincodeStubInterface, function stri
 	} else if function == "registerAccounts" {
 		return t.registerAccounts(stub, args)
 	} else if function == "addLoyalty" {
-		return t.registerAccounts(stub, args)
+		return t.addLoyalty(stub, args)
 	} else if function == "removeLoyalty" {
-		return t.registerAccounts(stub, args)
+		return t.removeLoyalty(stub, args)
 	}
 	fmt.Println("invoke did not find func: " + function) //error
 
@@ -131,6 +131,7 @@ func (t *SimpleChaincode) registerAccounts(stub shim.ChaincodeStubInterface, arg
 	var account Account
 	for _, newId := range newIds {
 		account = Account{id: newId, balance: 10000.0, loyalty: 0}
+		fmt.Println("New Account" + account.id)
 		accountBytes, err := json.Marshal(&account)
 		err = stub.PutState(accountPrefix+newId, accountBytes)
 		if err != nil {
