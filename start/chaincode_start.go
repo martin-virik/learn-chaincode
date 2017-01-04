@@ -34,14 +34,9 @@ type SimpleChaincode struct {
 
 // comment
 type Account struct {
-	ID          string  `json:"id"`
-	CashBalance float64 `json:"cashBalance"`
-}
-
-type Transaction struct {
-	FromId string `json:"fromId"`
-	ToId   string `json:"toId"`
-	amount int    `json:"amount"`
+	id      string  `json:"id"`
+	balance float64 `json:"balance"`
+	loyalty int64   `json:"loyalty"`
 }
 
 // ============================================================================================================================
@@ -80,6 +75,10 @@ func (t *SimpleChaincode) Invoke(stub shim.ChaincodeStubInterface, function stri
 	} else if function == "transfer" {
 		return t.transfer(stub, args)
 	} else if function == "registerAccounts" {
+		return t.registerAccounts(stub, args)
+	} else if function == "addLoyalty" {
+		return t.registerAccounts(stub, args)
+	} else if function == "removeLoyalty" {
 		return t.registerAccounts(stub, args)
 	}
 	fmt.Println("invoke did not find func: " + function) //error
@@ -129,11 +128,11 @@ func (t *SimpleChaincode) registerAccounts(stub shim.ChaincodeStubInterface, arg
 		return nil, errors.New("Error putting accounts")
 	}
 
-	var balance = 10000
-
+	var account Account
 	for _, newId := range newIds {
-		balanceBytes, err := json.Marshal(&balance)
-		err = stub.PutState(accountPrefix+newId, balanceBytes)
+		account = Account{id: newId, balance: 10000.0, loyalty: 0}
+		accountBytes, err := json.Marshal(&account)
+		err = stub.PutState(accountPrefix+newId, accountBytes)
 		if err != nil {
 			fmt.Println("error putting account balance")
 			return nil, errors.New("Error putting account balance")
@@ -166,7 +165,7 @@ func (t *SimpleChaincode) transfer(stub shim.ChaincodeStubInterface, args []stri
 	var fromId = args[0]
 	var toId = args[1]
 
-	amount, err := strconv.ParseInt(args[2], 10, 0)
+	amount, err := strconv.ParseFloat(args[2], 64)
 	if err != nil {
 		fmt.Println("Amount is not a number")
 		return nil, errors.New("Amount is not a number")
@@ -182,41 +181,139 @@ func (t *SimpleChaincode) transfer(stub shim.ChaincodeStubInterface, args []stri
 		return nil, errors.New("Error: to account is not registered")
 	}
 
-	fromBalance, err := GetAccountBalance(stub, fromId)
+	fromAccount, err := GetAccount(stub, fromId)
 	if err != nil {
-		fmt.Println("error gettng from account balance")
-		return nil, errors.New("Error getting from account balance")
+		fmt.Println("error gettng from account")
+		return nil, errors.New("Error getting from account")
 	}
 
-	var fromBalance64 = int64(fromBalance)
-
-	if fromBalance64 < amount {
+	if fromAccount.balance < amount {
 		fmt.Println("error not enough resources on from account")
 		return nil, errors.New("error not enough resources on from account")
 	}
 
-	toBalance, err := GetAccountBalance(stub, toId)
+	toAccount, err := GetAccount(stub, toId)
 	if err != nil {
-		fmt.Println("error gettng from account balance")
-		return nil, errors.New("Error getting from account balance")
+		fmt.Println("error gettng to Account")
+		return nil, errors.New("Error getting to account")
 	}
-	var toBalance64 = int64(toBalance)
 
-	fromBalance64 = fromBalance64 - amount
-	toBalance64 = toBalance64 + amount
+	fromAccount.balance = fromAccount.balance - amount
+	toAccount.balance = toAccount.balance + amount
 
-	fromBalanceBytes, err := json.Marshal(&fromBalance64)
-	err = stub.PutState(accountPrefix+fromId, fromBalanceBytes)
+	fromAccountBytes, err := json.Marshal(&fromAccount)
+	err = stub.PutState(accountPrefix+fromId, fromAccountBytes)
+	if err != nil {
+		fmt.Println("error putting from account")
+		return nil, errors.New("Error putting from account")
+	}
+
+	toAccountBytes, err := json.Marshal(&toAccount)
+	err = stub.PutState(accountPrefix+toId, toAccountBytes)
+	if err != nil {
+		fmt.Println("error putting to account")
+		return nil, errors.New("Error putting to account")
+	}
+
+	return nil, nil
+}
+
+func (t *SimpleChaincode) addLoyalty(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
+	fmt.Println("Handling a adding loyalty points")
+
+	if len(args) != 3 {
+		return nil, errors.New("Incorrect number of arguments. Expecting account id, number of points and a token")
+	}
+
+	if args[2] != securityToken {
+		fmt.Println("security token does not match")
+		return nil, errors.New("security token does not match")
+	}
+
+	registeredIds, err := GetAllAccountIds(stub)
+	if err != nil {
+		fmt.Println("error gettng account ids")
+		return nil, errors.New("Error gettng account ids")
+	}
+
+	var accountId = args[0]
+	points, err := strconv.ParseInt(args[2], 10, 0)
+	if err != nil {
+		fmt.Println("Number of loyalty points is not a number")
+		return nil, errors.New("Number of loyalty points  is not a number")
+	}
+
+	if registeredIds[accountId] != 1 {
+		fmt.Println("error: account is not registered")
+		return nil, errors.New("Erro: account is not registered")
+	}
+
+	account, err := GetAccount(stub, accountId)
+	if err != nil {
+		fmt.Println("error gettng account")
+		return nil, errors.New("Error getting account")
+	}
+
+	account.loyalty = account.loyalty + points
+
+	accountBytes, err := json.Marshal(&account)
+	err = stub.PutState(accountPrefix+accountId, accountBytes)
 	if err != nil {
 		fmt.Println("error putting from account balance")
 		return nil, errors.New("Error putting from account balance")
 	}
 
-	toBalanceBytes, err := json.Marshal(&toBalance64)
-	err = stub.PutState(accountPrefix+toId, toBalanceBytes)
+	return nil, nil
+}
+
+func (t *SimpleChaincode) removeLoyalty(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
+	fmt.Println("Handling a adding loyalty points")
+
+	if len(args) != 3 {
+		return nil, errors.New("Incorrect number of arguments. Expecting account id, number of points and a token")
+	}
+
+	if args[2] != securityToken {
+		fmt.Println("security token does not match")
+		return nil, errors.New("security token does not match")
+	}
+
+	registeredIds, err := GetAllAccountIds(stub)
 	if err != nil {
-		fmt.Println("error putting to account balance")
-		return nil, errors.New("Error putting to account balance")
+		fmt.Println("error gettng account ids")
+		return nil, errors.New("Error gettng account ids")
+	}
+
+	var accountId = args[0]
+	points, err := strconv.ParseInt(args[2], 10, 0)
+	if err != nil {
+		fmt.Println("Number of loyalty points is not a number")
+		return nil, errors.New("Number of loyalty points  is not a number")
+	}
+
+	if registeredIds[accountId] != 1 {
+		fmt.Println("error: account is not registered")
+		return nil, errors.New("Erro: account is not registered")
+	}
+
+	account, err := GetAccount(stub, accountId)
+	if err != nil {
+		fmt.Println("error gettng account")
+		return nil, errors.New("Error getting account")
+	}
+
+	if account.loyalty < points {
+		fmt.Println("not enough loyalty points")
+		return nil, errors.New("not enough loyalty points")
+	}
+
+	account.loyalty = account.loyalty - points
+
+	accountBytes, err := json.Marshal(&account)
+	err = stub.PutState(accountPrefix+accountId, accountBytes)
+	if err != nil {
+		fmt.Println("error putting from account balance")
+		return nil, errors.New("Error putting from account balance")
 	}
 
 	return nil, nil
@@ -242,21 +339,21 @@ func GetAllAccountIds(stub shim.ChaincodeStubInterface) (map[string]int, error) 
 	return accountIds, nil
 }
 
-func GetAccountBalance(stub shim.ChaincodeStubInterface, id string) (int, error) {
+func GetAccount(stub shim.ChaincodeStubInterface, id string) (Account, error) {
 
-	balanceBytes, err := stub.GetState(accountPrefix + id)
+	var account Account
+	accountBytes, err := stub.GetState(accountPrefix + id)
 	if err != nil {
 		fmt.Println("Error retrieving account Ids")
-		return 0, errors.New("Error retrieving account Ids")
+		return account, errors.New("Error retrieving account Ids")
 	}
-	var balance int
-	err = json.Unmarshal(balanceBytes, &balance)
+	err = json.Unmarshal(accountBytes, &account)
 	if err != nil {
 		fmt.Println("Error unmarshalling account Ids")
-		return 0, errors.New("Error unmarshalling account Ids")
+		return account, errors.New("Error unmarshalling account Ids")
 	}
 
-	return balance, nil
+	return account, nil
 }
 
 // Query is our entry point for queries
@@ -280,23 +377,23 @@ func (t *SimpleChaincode) Query(stub shim.ChaincodeStubInterface, function strin
 
 		fmt.Println("All success, returning accounts")
 		return registeredIdsBytes, nil
-	} else if function == "GetAccountBalance" { //read a variable
-		fmt.Println("Getting account balance")
+	} else if function == "GetAccountDetails" { //read a variable
+		fmt.Println("Getting account")
 
-		balance, err := GetAccountBalance(stub, args[0])
+		account, err := GetAccount(stub, args[0])
 		if err != nil {
-			fmt.Println("error gettng account balance")
+			fmt.Println("error gettng account")
 			return nil, err
 		}
 
-		balanceBytes, err1 := json.Marshal(&balance)
+		accountBytes, err1 := json.Marshal(&account)
 		if err1 != nil {
-			fmt.Println("Error marshalling balanceBytes")
+			fmt.Println("Error marshalling accountBytes")
 			return nil, err1
 		}
 
-		fmt.Println("All success, returning account balance")
-		return balanceBytes, nil
+		fmt.Println("All success, returning account")
+		return accountBytes, nil
 	}
 
 	fmt.Println("query did not find func: " + function) //error
