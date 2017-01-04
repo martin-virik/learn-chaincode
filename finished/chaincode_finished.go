@@ -239,7 +239,7 @@ func (t *SimpleChaincode) addLoyalty(stub shim.ChaincodeStubInterface, args []st
 	}
 
 	var accountId = args[0]
-	points, err := strconv.ParseInt(args[2], 10, 0)
+	points, err := strconv.ParseInt(args[1], 10, 0)
 	if err != nil {
 		fmt.Println("Number of loyalty points is not a number")
 		return nil, errors.New("Number of loyalty points  is not a number")
@@ -269,7 +269,7 @@ func (t *SimpleChaincode) addLoyalty(stub shim.ChaincodeStubInterface, args []st
 }
 
 func (t *SimpleChaincode) removeLoyalty(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
-	fmt.Println("Handling a adding loyalty points")
+	fmt.Println("Handling a removing loyalty points")
 
 	if len(args) != 3 {
 		return nil, errors.New("Incorrect number of arguments. Expecting account id, number of points and a token")
@@ -287,7 +287,7 @@ func (t *SimpleChaincode) removeLoyalty(stub shim.ChaincodeStubInterface, args [
 	}
 
 	var accountId = args[0]
-	points, err := strconv.ParseInt(args[2], 10, 0)
+	points, err := strconv.ParseInt(args[1], 10, 0)
 	if err != nil {
 		fmt.Println("Number of loyalty points is not a number")
 		return nil, errors.New("Number of loyalty points  is not a number")
