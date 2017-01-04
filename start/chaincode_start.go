@@ -133,6 +133,7 @@ func (t *SimpleChaincode) registerAccounts(stub shim.ChaincodeStubInterface, arg
 		account = Account{id: newId, balance: 10000.0, loyalty: 0}
 		fmt.Println("New Account" + account.id)
 		accountBytes, err := json.Marshal(&account)
+		fmt.Println("New Account bytes" + string(accountBytes))
 		err = stub.PutState(accountPrefix+newId, accountBytes)
 		if err != nil {
 			fmt.Println("error putting account balance")
@@ -348,6 +349,9 @@ func GetAccount(stub shim.ChaincodeStubInterface, id string) (Account, error) {
 		fmt.Println("Error retrieving account Ids")
 		return account, errors.New("Error retrieving account Ids")
 	}
+
+	fmt.Println("Read Account bytes" + string(accountBytes))
+
 	err = json.Unmarshal(accountBytes, &account)
 	if err != nil {
 		fmt.Println("Error unmarshalling account Ids")
